@@ -23,4 +23,10 @@ check_size:
 			stat --printf="size: %s byte(s)\n" "$(PROJECT).com"
 
 clean:
-			rm -f *.o *.lst *.elf *.img *.com
+			rm -f *.o *.lst *.elf *.img *.com *.bin
+
+pong:
+			nasm -f bin -o pong.bin pong.asm
+			dd if=/dev/zero of=pong.img bs=1024 count=1440
+			dd if=pong.bin of=pong.img seek=0 count=1 conv=notrunc
+			qemu-system-i386 -drive format=raw,index=0,media=disk,file=pong.img
