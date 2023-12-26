@@ -68,7 +68,6 @@ end:                                           ; ***** end of program *****
       jmp $                                    ; infinite loop
 
 set_pixel:                                     ; ***** write a pixel to screen *****
-                                               ; assumes ES is already set correctly
                                                ;
                                                ; input AL - pixel color
                                                ; input BX - x coordinate
