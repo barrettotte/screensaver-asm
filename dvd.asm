@@ -26,13 +26,10 @@ main:                                          ; ***** main program loop *****
       mov ax, 0x13                             ; set video mode to 320x200, 256 colors
       int 0x10                                 ; BIOS interrupt - video services
 
-                                               ; TODO: set_pixel function(x,y,c)
-                                               ; set pixel at coordinates (100, 100) with color
-      mov ax, VIDEO_SEGMENT                    ; graphics video memory segment
-      mov es, ax                               ; 
-      mov di, 100 * SCREEN_WIDTH + 100         ; calculate pixel offset ((x*width) + y)
-      mov al, 13                               ; color (magenta)
-      mov [es:di], al                          ; set pixel color
+      mov al, 13                               ; pixel color (magenta)
+      mov bx, 100                              ; x coordinate
+      mov cx, 100                              ; y coordinate
+      call set_pixel                           ; write pixel to screen
 
       mov ah, 0                                ; read character
       int 0x16                                 ; BIOS interrupt - keyboard services
@@ -74,6 +71,28 @@ print_char:                                    ; ***** print single char to cons
       and ah, 0x00                             ; clear AH
       pop bx                                   ; 
       ret                                      ; end print_char subroutine
+
+set_pixel:                                     ; ***** write a pixel to screen *****
+                                               ; assumes ES is already set correctly
+                                               ;
+                                               ; input AL - pixel color
+                                               ; input BX - x coordinate
+                                               ; input CX - y coordinate
+      push di                                  ;
+      push ax                                  ; store pixel color
+
+      mov ax, VIDEO_SEGMENT                    ; graphics video memory segment
+      mov es, ax                               ; set extra segment to video memory
+
+      mov ax, SCREEN_WIDTH                     ; offset = SCREEN_WIDTH
+      mul bx                                   ; offset = (x * SCREEN_WIDTH)
+      add ax, cx                               ; offset = (x * SCREEN_WIDTH) + y
+      mov di, ax                               ; set pixel offset
+      pop ax                                   ; restore pixel color
+      mov [es:di], al                          ; set pixel color
+
+      pop di                                   ;
+      ret                                      ; end set_pixel subroutine
 
 prompt: db 'Press any key to continue...', 0   ; prompt to reset
 
