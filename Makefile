@@ -1,4 +1,4 @@
-PROJECT = dvd
+PROJECT = screensaver
 SRC = "$(PROJECT).asm"
 
 AS = nasm

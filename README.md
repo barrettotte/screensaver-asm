@@ -1,6 +1,6 @@
-# dvd-asm
+# screensaver-asm
 
-DVD icon bouncer in real mode assembly
+A bouncing square in real mode x86 assembly.
 
 ## References
 
