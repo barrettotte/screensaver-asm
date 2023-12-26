@@ -26,10 +26,20 @@ main:                                          ; ***** main program loop *****
       mov ax, 0x13                             ; set video mode to 320x200, 256 colors
       int 0x10                                 ; BIOS interrupt - video services
 
+      mov cx, 100                              ; j = 100 (start position)
+draw_row:
+      mov bx, 100                              ; i = 100 (end position)
+draw_col:
       mov al, 13                               ; pixel color (magenta)
-      mov bx, 100                              ; x coordinate
-      mov cx, 100                              ; y coordinate
       call set_pixel                           ; write pixel to screen
+
+      inc bx                                   ; i++
+      cmp bx, 125                              ; check column loop condition
+      jl draw_col                              ; while i < start_x + square_width
+
+      inc cx                                   ; j++
+      cmp cx, 125                              ; check row loop condition
+      jl draw_row                              ; while j < start_y + square_height
 
       mov ah, 0                                ; read character
       int 0x16                                 ; BIOS interrupt - keyboard services
@@ -37,11 +47,17 @@ main:                                          ; ***** main program loop *****
       mov ax, 0x0003                           ; set video mode to text mode, 80x25
       int 0x10                                 ; BIOS interrupt - video services
 
-      xor ax, ax                               ; ax=0
+      xor ax, ax                               ; AX = 0
       mov ds, ax                               ; reset data segment
       mov es, ax                               ; reset extra segment
+
       mov si, prompt                           ; load pointer to prompt
-      call print_str                           ; print prompt to console
+prompt_loop:
+      lodsb                                    ; AL = prompt[SI]
+      cmp al, 0                                ; check for null terminator
+      je reset                                 ; prompt finished printing
+      mov ah, 0x0E                             ; teletype output
+      int 0x10                                 ; BIOS interrupt - video services
 
 reset:                                         ; ***** reset to beginning *****
       mov ah, 0                                ; read character
@@ -50,27 +66,6 @@ reset:                                         ; ***** reset to beginning *****
 
 end:                                           ; ***** end of program *****
       jmp $                                    ; infinite loop
-
-print_str:                                     ; ***** print string to console *****
-                                               ; input SI - pointer to string
-.ps_loop:                                      ;
-      lodsb                                    ; load byte into AL from string (SI)
-      cmp al, 0                                ; check for string null terminator
-      je .ps_done                              ; while not null terminator
-      call print_char                          ; print a single char to console
-      jmp .ps_loop                             ; continue loop
-.ps_done:                                      ;
-      ret                                      ; end print_str subroutine
-
-print_char:                                    ; ***** print single char to console *****
-                                               ; input AL - char to print, clobbers AH
-      push bx                                  ;
-      mov ah, 0x0E	                       ; teletype output function
-      mov bx, 0x000F	                       ; BH page zero and BL color (graphic mode only)
-      int 0x10		                       ; BIOS interrupt - display one char
-      and ah, 0x00                             ; clear AH
-      pop bx                                   ; 
-      ret                                      ; end print_char subroutine
 
 set_pixel:                                     ; ***** write a pixel to screen *****
                                                ; assumes ES is already set correctly
@@ -85,8 +80,8 @@ set_pixel:                                     ; ***** write a pixel to screen *
       mov es, ax                               ; set extra segment to video memory
 
       mov ax, SCREEN_WIDTH                     ; offset = SCREEN_WIDTH
-      mul bx                                   ; offset = (x * SCREEN_WIDTH)
-      add ax, cx                               ; offset = (x * SCREEN_WIDTH) + y
+      mul cx                                   ; offset = (y * SCREEN_WIDTH)
+      add ax, bx                               ; offset = (x * SCREEN_WIDTH) + x
       mov di, ax                               ; set pixel offset
       pop ax                                   ; restore pixel color
       mov [es:di], al                          ; set pixel color
@@ -95,6 +90,8 @@ set_pixel:                                     ; ***** write a pixel to screen *
       ret                                      ; end set_pixel subroutine
 
 prompt: db 'Press any key to continue...', 0   ; prompt to reset
+curr_x: dw 0                                   ; current x position
+curr_y: dw 0                                   ; current y position
 
 %ifdef com_file
 %else
