@@ -1,8 +1,19 @@
 ;
 
-%define SCREEN_WIDTH  320
+%define SCREEN_WIDTH 320
 %define SCREEN_HEIGHT 200
+
+%define KEYBOARD_INTERRUPT 0x16
+%define TTY_READ 0x0
+
+%define VIDEO_INTERRUPT 0x10
+%define VIDEO_TTY_OUT 0x0E
+%define MODE_TEXT 0x3
+%define MODE_VIDEO 0x13
+
 %define VIDEO_SEGMENT 0xA000
+%define COLOR_MAGENTA 13
+%define SQUARE_WIDTH 25
 
 %ifdef com_file
   %define ORIGIN 0x0100
@@ -19,49 +30,47 @@ _start:                                        ; ***** program entry *****
       mov ds, ax                               ; init data segment
 
 main:                                          ; ***** main program loop *****
-      xor ax, ax                               ; ax=0
+      xor ax, ax                               ; AX = 0
       mov ds, ax                               ; set data segment
       mov es, ax                               ; set extra segment
 
-      mov ax, 0x13                             ; set video mode to 320x200, 256 colors
-      int 0x10                                 ; BIOS interrupt - video services
+      mov ax, MODE_VIDEO                       ; set video mode to 320x200, 256 colors
+      int VIDEO_INTERRUPT                      ; BIOS interrupt
 
       mov cx, 100                              ; j = 100 (start position)
-draw_row:
+draw_row:                                      ; row loop
       mov bx, 100                              ; i = 100 (end position)
-draw_col:
-      mov al, 13                               ; pixel color (magenta)
+draw_col:                                      ; column loop
+      mov al, COLOR_MAGENTA                    ; pixel color
       call set_pixel                           ; write pixel to screen
 
       inc bx                                   ; i++
-      cmp bx, 125                              ; check column loop condition
-      jl draw_col                              ; while i < start_x + square_width
+      cmp bx, 100 + SQUARE_WIDTH               ; check column loop condition
+      jl draw_col                              ; while i < x_0 + SQUARE_WIDTH
 
       inc cx                                   ; j++
-      cmp cx, 125                              ; check row loop condition
-      jl draw_row                              ; while j < start_y + square_height
+      cmp cx, 100 + SQUARE_WIDTH               ; check row loop condition
+      jl draw_row                              ; while j < y_0 + SQUARE_WIDTH
 
-      mov ah, 0                                ; read character
-      int 0x16                                 ; BIOS interrupt - keyboard services
+      mov ah, TTY_READ                         ; read character
+      int KEYBOARD_INTERRUPT                   ; BIOS interrupt
 
-      mov ax, 0x0003                           ; set video mode to text mode, 80x25
-      int 0x10                                 ; BIOS interrupt - video services
-
-      xor ax, ax                               ; AX = 0
-      mov ds, ax                               ; reset data segment
-      mov es, ax                               ; reset extra segment
+      mov ax, MODE_TEXT                        ; set video mode to text mode, 80x25
+      int VIDEO_INTERRUPT                      ; BIOS interrupt
 
       mov si, prompt                           ; load pointer to prompt
 prompt_loop:
       lodsb                                    ; AL = prompt[SI]
       cmp al, 0                                ; check for null terminator
       je reset                                 ; prompt finished printing
-      mov ah, 0x0E                             ; teletype output
-      int 0x10                                 ; BIOS interrupt - video services
+
+      mov ah, VIDEO_TTY_OUT                    ; teletype output
+      int VIDEO_INTERRUPT                      ; BIOS interrupt
+      jmp prompt_loop                          ; continue printing
 
 reset:                                         ; ***** reset to beginning *****
-      mov ah, 0                                ; read character
-      int 0x16                                 ; BIOS interrupt - keyboard services
+      mov ah, TTY_READ                         ; read character
+      int KEYBOARD_INTERRUPT                   ; BIOS interrupt
       jmp main                                 ; loop to beginning
 
 end:                                           ; ***** end of program *****
