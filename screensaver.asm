@@ -2,7 +2,7 @@
 
 %define SCREEN_WIDTH 320
 %define SCREEN_HEIGHT 200
-%define VIDEO_SEGMENT 0xA000
+
 %define COLOR_MAGENTA 13
 %define SQUARE_WIDTH 25
 
@@ -14,11 +14,8 @@
 %define MODE_TEXT 0x3
 %define MODE_VIDEO 0x13
 
-%ifdef com_file
-  %define ORIGIN 0x0100
-%else
-  %define ORIGIN 0x7C00
-%endif
+%define VIDEO_SEGMENT 0xA000
+%define ORIGIN 0x7C00
 
       org ORIGIN                               ; set boot sector origin
       cpu 386                                  ;
@@ -124,7 +121,7 @@ set_pixel:                                     ; ***** write a pixel to screen *
 
 prompt: db 'Press any key to continue...', 0   ; prompt to reset
 
-%ifdef com_file
+%ifdef skip_fill
 %else
                                                ; ***** complete boot sector *****
       times 510 - ($ - $$) db 0                ; pad rest of boot sector
