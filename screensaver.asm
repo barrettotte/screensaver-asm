@@ -2,6 +2,9 @@
 
 %define SCREEN_WIDTH 320
 %define SCREEN_HEIGHT 200
+%define VIDEO_SEGMENT 0xA000
+%define COLOR_MAGENTA 13
+%define SQUARE_WIDTH 25
 
 %define KEYBOARD_INTERRUPT 0x16
 %define TTY_READ 0x0
@@ -10,10 +13,6 @@
 %define VIDEO_TTY_OUT 0x0E
 %define MODE_TEXT 0x3
 %define MODE_VIDEO 0x13
-
-%define VIDEO_SEGMENT 0xA000
-%define COLOR_MAGENTA 13
-%define SQUARE_WIDTH 25
 
 %ifdef com_file
   %define ORIGIN 0x0100
@@ -26,38 +25,41 @@
       bits 16                                  ;
 
 _start:                                        ; ***** program entry *****
-      mov ax, ORIGIN                           ; 
-      mov ds, ax                               ; init data segment
 
 main:                                          ; ***** main program loop *****
       xor ax, ax                               ; AX = 0
-      mov ds, ax                               ; set data segment
-      mov es, ax                               ; set extra segment
+      mov ds, ax                               ; reset data segment
+      mov es, ax                               ; reset extra segment
 
       mov ax, MODE_VIDEO                       ; set video mode to 320x200, 256 colors
       int VIDEO_INTERRUPT                      ; BIOS interrupt
 
-      mov cx, 100                              ; j = 100 (start position)
+%define x_0 100
+%define y_0 100
+
+      mov cx, y_0                              ; y = y_0
 draw_row:                                      ; row loop
-      mov bx, 100                              ; i = 100 (end position)
+      mov bx, x_0                              ; x = x_0
 draw_col:                                      ; column loop
       mov al, COLOR_MAGENTA                    ; pixel color
       call set_pixel                           ; write pixel to screen
+end_col:
+      inc bx                                   ; x++
+      cmp bx, x_0 + SQUARE_WIDTH               ; check column loop condition
+      jl draw_col                              ; while x < x_0 + SQUARE_WIDTH
+end_row:
+      inc cx                                   ; y++
+      cmp cx, y_0 + SQUARE_WIDTH               ; check row loop condition
+      jl draw_row                              ; while y < y_0 + SQUARE_WIDTH
 
-      inc bx                                   ; i++
-      cmp bx, 100 + SQUARE_WIDTH               ; check column loop condition
-      jl draw_col                              ; while i < x_0 + SQUARE_WIDTH
-
-      inc cx                                   ; j++
-      cmp cx, 100 + SQUARE_WIDTH               ; check row loop condition
-      jl draw_row                              ; while j < y_0 + SQUARE_WIDTH
-
+draw_done:
       mov ah, TTY_READ                         ; read character
       int KEYBOARD_INTERRUPT                   ; BIOS interrupt
 
       mov ax, MODE_TEXT                        ; set video mode to text mode, 80x25
       int VIDEO_INTERRUPT                      ; BIOS interrupt
 
+print_prompt:                                  ; ***** print prompt to console *****
       mov si, prompt                           ; load pointer to prompt
 prompt_loop:
       lodsb                                    ; AL = prompt[SI]
@@ -89,7 +91,7 @@ set_pixel:                                     ; ***** write a pixel to screen *
 
       mov ax, SCREEN_WIDTH                     ; offset = SCREEN_WIDTH
       mul cx                                   ; offset = (y * SCREEN_WIDTH)
-      add ax, bx                               ; offset = (x * SCREEN_WIDTH) + x
+      add ax, bx                               ; offset = (y * SCREEN_WIDTH) + x
       mov di, ax                               ; set pixel offset
       pop ax                                   ; restore pixel color
       mov [es:di], al                          ; set pixel color
