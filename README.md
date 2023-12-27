@@ -2,6 +2,10 @@
 
 A bouncing square in real mode x86 assembly.
 
+## Run
+
+`make qemu`
+
 ## References
 
 - https://en.wikipedia.org/wiki/BIOS_interrupt_call
