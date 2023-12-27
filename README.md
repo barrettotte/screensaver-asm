@@ -1,6 +1,6 @@
 # screensaver-asm
 
-A bouncing square in real mode x86 assembly.
+A bouncing square screensaver-like thing in x86 real mode.
 
 ## Run
 

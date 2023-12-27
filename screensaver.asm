@@ -1,4 +1,4 @@
-;
+; A bouncing square screensaver-like thing
 
 %define SQUARE_WIDTH 25
 
@@ -36,17 +36,19 @@ draw:                                          ; ***** draw ******
       mov ax, MODE_VIDEO                       ; set video mode to 320x200, 256 colors
       int VIDEO_INTERRUPT                      ; BIOS interrupt
 
+; ===== TEMP =====
 %define x_i 50
 %define y_i 50
+; ================
 
       mov cx, 1
       mov dx, x_i
 draw_loop:
+      push cx
       cmp cx, 1
       je square ; don't erase on first frame
 
 erase:
-      push cx
       push dx
 
       push SQUARE_WIDTH                        ; height
@@ -58,30 +60,40 @@ erase:
       add sp, 2*5                              ; remove args from stack
 
       pop dx
-      pop cx
 
 square:
+      pop cx
       ; ===== TEMP =====
       mov dx, cx
       shl dx, 3
       add dx, x_i
       ; ================
 
+      ; TODO: change direction when screen bounds hit
+
       push cx
       push dx
+
+      mov ax, [curr_color]                     ;
+      inc ax
+      cmp ax, 8                                ;
+      jl skip_color_wrap                       ;
+      mov ax, 1                                ; wrap colors around
+skip_color_wrap:
+      mov [curr_color], ax                     ; update current color
 
       push SQUARE_WIDTH                        ; height
       push SQUARE_WIDTH                        ; width
       push dx                                  ; y_0
       push dx                                  ; x_0
-      push cx                                  ; color 
+      push ax                                  ; color 
       call draw_rect                           ; draw rectangle
       add sp, 2*5                              ; remove args from stack
 
-      ; mov cx, 18                               ; NOTE: This interrupt seems to behave strangely in emulated environments.
-      ; mov dx, 500                              ;   I just plugged in arbitrary numbers in here until I got 1s delay. 
       mov cx, 3
       mov dx, 500
+      ; mov cx, 18                               ; NOTE: This interrupt seems to behave strangely in emulated environments.
+      ; mov dx, 500                              ;   I just plugged in arbitrary numbers in here until I got 1s delay. 
       mov ah, MISC_WAIT                        ; wait (for 1 second)
       int MISC_INTERRUPT                       ; BIOS interrupt
 
@@ -89,7 +101,7 @@ square:
       pop cx
 draw_next:
       inc cx                                   ; i++
-      cmp cx, 8                                ;
+      cmp cx, 16                               ;
       jl draw_loop                             ; continue drawing
 
 wait_0:                                        ; ***** wait for keypress *****
@@ -173,6 +185,7 @@ set_pixel:                                     ; ***** write a pixel to screen *
       ret                                      ; end set_pixel subroutine
 
 prompt: db 'Press any key to continue...', 0   ; prompt to reset
+curr_color: db 0                               ; current color of square
 
 %ifdef skip_fill
 %else
