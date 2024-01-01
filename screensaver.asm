@@ -37,55 +37,55 @@ draw:                                          ; ***** draw ******
       int VIDEO_INTERRUPT                      ; BIOS interrupt
 
 ; ===== TEMP =====
-%define x_i 50
-%define y_i 50
+%define x_0 25
+%define y_0 25
 ; ================
 
+      mov word [curr_x], x_0
+      mov word [curr_y], y_0
       mov cx, 1
-      mov dx, x_i
 draw_loop:
       push cx
       cmp cx, 1
-      je square ; don't erase on first frame
+      je square                                ; don't erase on first frame
 
 erase:
-      push dx
+      mov ax, [curr_x]
+      mov bx, [curr_y]
 
       push SQUARE_WIDTH                        ; height
       push SQUARE_WIDTH                        ; width
-      push dx                                  ; y_0
-      push dx                                  ; x_0
+      push bx                                  ; y = curr_y
+      push ax                                  ; x = curr_x
       push COLOR_BLACK                         ; color 
       call draw_rect                           ; draw rectangle
       add sp, 2*5                              ; remove args from stack
 
-      pop dx
-
 square:
-      pop cx
-      ; ===== TEMP =====
-      mov dx, cx
-      shl dx, 3
-      add dx, x_i
-      ; ================
+      mov dx, [curr_x]                         ; load current x
+      add dx, 8                                ; move x direction
+      mov [curr_x], dx                         ; save current x
+
+      mov dx, [curr_y]                         ; load current y
+      add dx, 8                                ; move y direction
+      mov [curr_y], dx                         ; save current y
 
       ; TODO: change direction when screen bounds hit
 
-      push cx
-      push dx
-
-      mov ax, [curr_color]                     ;
-      inc ax
-      cmp ax, 8                                ;
-      jl skip_color_wrap                       ;
+      mov ax, [curr_color]                     ; load current color
+      inc ax                                   ; change color
+      cmp ax, 8                                ; check if color wrap needed
+      jle skip_color_wrap                      ; skip color wrap if not needed
       mov ax, 1                                ; wrap colors around
 skip_color_wrap:
       mov [curr_color], ax                     ; update current color
 
       push SQUARE_WIDTH                        ; height
       push SQUARE_WIDTH                        ; width
-      push dx                                  ; y_0
-      push dx                                  ; x_0
+      mov dx, [curr_y]                         ; load current y
+      push dx                                  ; y position
+      mov dx, [curr_x]                         ; load current x
+      push dx                                  ; x position
       push ax                                  ; color 
       call draw_rect                           ; draw rectangle
       add sp, 2*5                              ; remove args from stack
@@ -97,11 +97,10 @@ skip_color_wrap:
       mov ah, MISC_WAIT                        ; wait (for 1 second)
       int MISC_INTERRUPT                       ; BIOS interrupt
 
-      pop dx
-      pop cx
 draw_next:
+      pop cx                                   ; restore i
       inc cx                                   ; i++
-      cmp cx, 16                               ;
+      cmp cx, 16+1                             ; check loop condition
       jl draw_loop                             ; continue drawing
 
 wait_0:                                        ; ***** wait for keypress *****
@@ -185,6 +184,8 @@ set_pixel:                                     ; ***** write a pixel to screen *
       ret                                      ; end set_pixel subroutine
 
 prompt: db 'Press any key to continue...', 0   ; prompt to reset
+curr_x: dw 0                                   ; current x coordinate
+curr_y: dw 0                                   ; current y coordinate
 curr_color: db 0                               ; current color of square
 
 %ifdef skip_fill
