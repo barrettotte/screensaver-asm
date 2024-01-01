@@ -2,6 +2,10 @@
 
 A bouncing square screensaver-like thing in x86 real mode.
 
+![example.gif](example.gif)
+
+This could probably be optimized further, but as of now its 251 bytes.
+
 ## Run
 
 `make qemu`
