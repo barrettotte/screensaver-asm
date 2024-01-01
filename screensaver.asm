@@ -60,19 +60,19 @@ main:                                          ; ***** main program loop *****
 .check_ybounds:                                ; check top or bottom bounds
       mov cx, [py]                             ; load current y position
 .check_top:                                    ; check top bound
-      cmp cx, SPEED                            ;
+      cmp cx, 0                                ;
       jle .bounce_y                            ; bounce if top bound hit (py <= 0)
 .check_bottom:                                 ; check bottom bound
-      cmp cx, SCREEN_HEIGHT-SQUARE_WIDTH-SPEED ;
+      cmp cx, SCREEN_HEIGHT-SQUARE_WIDTH       ;
       jge .bounce_y                            ; bounce if bottom bound hit (py >= SCREEN_HEIGHT-SQUARE_WIDTH)
 
 .check_xbounds:                                ; check left or right bounds
       mov cx, [px]                             ; load current x position
 .check_left:                                   ; check left bound
-      cmp cx, SPEED                            ;
+      cmp cx, 0                                ;
       jle .bounce_x                            ; bounce if left bound hit (px <= 0)
 .check_right:                                  ; check right bound
-      cmp cx, SCREEN_WIDTH-SQUARE_WIDTH-SPEED  ;
+      cmp cx, SCREEN_WIDTH-SQUARE_WIDTH        ;
       jge .bounce_x                            ; bounce if right bound hit (px >= SCREEN_WIDTH-SQUARE_WIDTH)
 
 .no_bounce:                                    ; no bounds hit
