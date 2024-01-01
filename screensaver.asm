@@ -10,20 +10,18 @@
 %define SCREEN_WIDTH 320
 %define SCREEN_HEIGHT 200
 %define COLOR_BLACK 0
-%define COLOR_MAGENTA 13
 %define COLOR_RED 4
+%define COLOR_MAGENTA 13
+
+%define VIDEO_SEGMENT 0xA000
 
 %define VIDEO_INTERRUPT 0x10
-%define VIDEO_TTY_OUT 0x0E
 %define MODE_VIDEO 0x13
 
 %define MISC_INTERRUPT 0x15
 %define MISC_WAIT 0x86
 
-%define VIDEO_SEGMENT 0xA000
-%define ORIGIN 0x7C00
-
-      org ORIGIN                               ; set boot sector origin
+      org 0x7C00                               ; set boot sector origin
       cpu 386                                  ;
       bits 16                                  ;
 _start:                                        ; ***** program entry *****
@@ -39,13 +37,13 @@ main:                                          ; ***** main program loop *****
       mov es, ax                               ; set extra segment to video memory
 
       mov cx, 1                                ; i TODO: remove all refs to i
-draw_loop:                                     ; ***** draw a frame *****
+.draw_loop:                                    ; ***** draw a frame *****
       push cx                                  ;
       cmp cx, 1                                ; 
-      je square                                ; don't erase on first frame
+      je .square                               ; don't erase on first frame
       ; TODO: might not need this check when velocity add moved
 
-erase_prev:                                    ; ***** clear previous square *****
+.erase_prev:                                   ; ***** clear previous square *****
       push SQUARE_WIDTH                        ; arg: height
       push SQUARE_WIDTH                        ; arg: width
       mov bx, [py]                             ; load current y position
@@ -56,7 +54,7 @@ erase_prev:                                    ; ***** clear previous square ***
       call draw_rect                           ; draw rectangle
       add sp, 2*5                              ; remove args from stack
 
-square:                                        ; draw square
+.square:                                       ; draw square
       mov ax, [px]                             ; load current x position
       add ax, SPEED                            ; move x direction
       mov [px], ax                             ; save current x position
@@ -69,9 +67,9 @@ square:                                        ; draw square
 
 ;       inc ax                                   ; change color
 ;       cmp ax, 8                                ; check if color wrap needed
-;       jle skip_color_wrap                      ; skip color wrap if not needed
+;       jle .skip_color_wrap                     ; skip color wrap if not needed
 ;       mov ax, 1                                ; wrap colors around
-; skip_color_wrap:
+; .skip_color_wrap:
 ;       mov [color], ax                          ; update current color
 
       push SQUARE_WIDTH                        ; arg: height
@@ -94,22 +92,22 @@ square:                                        ; draw square
 
       mov cx, [px]                             ; load current x position
       mov dx, [py]                             ; load current y position
-check_top:                                     ; check top bound
+.check_top:                                    ; check top bound
       cmp dx, 0                                ;
-      jle do_bounce                            ; bounce if top bound hit (py <= 0)
-check_left:                                    ; check left bound
+      jle .do_bounce                           ; bounce if top bound hit (py <= 0)
+.check_left:                                   ; check left bound
       cmp cx, 0                                ;
-      jle do_bounce                            ; bounce if left bound hit (px <= 0)
-check_right:                                   ; check right bound
+      jle .do_bounce                           ; bounce if left bound hit (px <= 0)
+.check_right:                                  ; check right bound
       cmp cx, SCREEN_WIDTH-SQUARE_WIDTH        ;
-      jge do_bounce                            ; bounce if right bound hit (px >= SCREEN_WIDTH-SQUARE_WIDTH)
-check_bottom:                                  ; check bottom bound
+      jge .do_bounce                           ; bounce if right bound hit (px >= SCREEN_WIDTH-SQUARE_WIDTH)
+.check_bottom:                                 ; check bottom bound
       cmp dx, SCREEN_HEIGHT-SQUARE_WIDTH       ;
-      jge do_bounce                            ; bounce if bottom bound hit (py >= SCREEN_HEIGHT-SQUARE_WIDTH)
-no_bounce:                                     ; no bounds hit
-      jmp draw_next                            ; skip bouncing
+      jge .do_bounce                           ; bounce if bottom bound hit (py >= SCREEN_HEIGHT-SQUARE_WIDTH)
+.no_bounce:                                    ; no bounds hit
+      jmp .draw_next                           ; skip bouncing
 
-do_bounce:                                     ; change direction depending on wall hit
+.do_bounce:                                    ; change direction depending on wall hit
       ; TODO:
       nop
       ; if left or right bound hit, reverse x velocity
@@ -117,14 +115,14 @@ do_bounce:                                     ; change direction depending on w
       ; x++ if x == 1, else x--
       ; y++ if y == 1, else y--
 
-draw_next:                                     ; continue to next iteration
+.draw_next:                                    ; continue to next iteration
       ; TODO: remove loop end and refs to i
       pop cx                                   ; restore i
       inc cx                                   ; i++
       cmp cx, 60+1                             ; check loop condition
-      jl draw_loop                             ; continue drawing
+      jl .draw_loop                            ; continue drawing
 
-end:                                           ; ***** end of program *****
+.end:                                          ; ***** end of program *****
       jmp $                                    ; infinite loop
 
 draw_rect:                                     ; ***** draw rectangle *****
@@ -186,7 +184,7 @@ vy:   db VY_0                                  ; y velocity (1=down, 0=up)
 color:                                         ;
       db COLOR_RED                             ; color of square (init red)
 
-%ifdef skip_fill
+%ifdef SKIP_FILL
 %else
                                                ; ***** complete boot sector *****
       times 510 - ($ - $$) db 0                ; pad rest of boot sector

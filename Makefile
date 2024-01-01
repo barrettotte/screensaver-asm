@@ -12,7 +12,7 @@ build:		build_img check_size
 
 build_img:
 			$(AS) -f bin -o "$(PROJECT).img" $(SRC)
-			$(AS) -f bin -l "$(PROJECT).lst" -o "$(PROJECT)-unfilled.img" -Dskip_fill=1 $(SRC)
+			$(AS) -f bin -l "$(PROJECT).lst" -o "$(PROJECT)-unfilled.img" -DSKIP_FILL=1 $(SRC)
 
 qemu:		build
 			$(QEMU) $(QEMU_FLAGS)
