@@ -9,6 +9,7 @@
 
 %define SCREEN_WIDTH 320
 %define SCREEN_HEIGHT 200
+
 %define COLOR_BLACK 0
 %define COLOR_RED 4
 %define COLOR_MAGENTA 13
@@ -36,42 +37,7 @@ main:                                          ; ***** main program loop *****
       mov ax, VIDEO_SEGMENT                    ; graphics video memory segment
       mov es, ax                               ; set extra segment to video memory
 
-      mov cx, 1                                ; i TODO: remove all refs to i
-.draw_loop:                                    ; ***** draw a frame *****
-      push cx                                  ;
-      cmp cx, 1                                ; 
-      je .square                               ; don't erase on first frame
-      ; TODO: might not need this check when velocity add moved
-
-.erase_prev:                                   ; ***** clear previous square *****
-      push SQUARE_WIDTH                        ; arg: height
-      push SQUARE_WIDTH                        ; arg: width
-      mov bx, [py]                             ; load current y position
-      push bx                                  ; arg: y
-      mov ax, [px]                             ; load current x position
-      push ax                                  ; arg: x
-      push COLOR_BLACK                         ; arg: color
-      call draw_rect                           ; draw rectangle
-      add sp, 2*5                              ; remove args from stack
-
-.square:                                       ; draw square
-      mov ax, [px]                             ; load current x position
-      add ax, SPEED                            ; move x direction
-      mov [px], ax                             ; save current x position
-
-      mov ax, [py]                             ; load current y position
-      add ax, SPEED                            ; move y direction
-      mov [py], ax                             ; save current y position
-
-      ; TODO: change direction when screen bounds hit
-
-;       inc ax                                   ; change color
-;       cmp ax, 8                                ; check if color wrap needed
-;       jle .skip_color_wrap                     ; skip color wrap if not needed
-;       mov ax, 1                                ; wrap colors around
-; .skip_color_wrap:
-;       mov [color], ax                          ; update current color
-
+.draw_loop:                                    ; draw a frame
       push SQUARE_WIDTH                        ; arg: height
       push SQUARE_WIDTH                        ; arg: width
       mov ax, [py]                             ; load current y position
@@ -83,13 +49,13 @@ main:                                          ; ***** main program loop *****
       call draw_rect                           ; draw rectangle
       add sp, 2*5                              ; remove args from stack
 
-      mov cx, 1                                ;
-      mov dx, 100                              ;
-      ; mov cx, 18                               ; NOTE: This interrupt seems to behave strangely in emulated environments.
-      ; mov dx, 500                              ;   I just plugged in arbitrary numbers in here until I got 1s delay. 
+.wait:                                         ; wait to allow animation
+      mov cx, 1                                ; NOTE: This interrupt seems to behave strangely in emulated environments.
+      mov dx, 100                              ;   I just plugged in arbitrary numbers in here until I got a smoothish delay.  
       mov ah, MISC_WAIT                        ; wait
       int MISC_INTERRUPT                       ; BIOS interrupt
 
+.check_bounds:                                 ; check left, right, top, and bottom bounds
       mov cx, [px]                             ; load current x position
       mov dx, [py]                             ; load current y position
 .check_top:                                    ; check top bound
@@ -114,15 +80,41 @@ main:                                          ; ***** main program loop *****
       ; if top or bottom bound hit, reverse y velocity
       ; x++ if x == 1, else x--
       ; y++ if y == 1, else y--
+.update_color:
+      inc ax                                   ; change color
+      cmp ax, 15                               ; check if color wrap needed
+      jle .skip_color_wrap                     ; skip color wrap if not needed
+      mov ax, 1                                ; wrap colors around
+.skip_color_wrap:                              ;
+      mov [color], ax                          ; update current color
 
 .draw_next:                                    ; continue to next iteration
-      ; TODO: remove loop end and refs to i
-      pop cx                                   ; restore i
-      inc cx                                   ; i++
-      cmp cx, 60+1                             ; check loop condition
-      jl .draw_loop                            ; continue drawing
 
-.end:                                          ; ***** end of program *****
+.erase_prev:                                   ; clear previous square
+      push SQUARE_WIDTH                        ; arg: height
+      push SQUARE_WIDTH                        ; arg: width
+      mov bx, [py]                             ; load current y position
+      push bx                                  ; arg: y
+      mov ax, [px]                             ; load current x position
+      push ax                                  ; arg: x
+      push COLOR_BLACK                         ; arg: color
+      call draw_rect                           ; draw rectangle
+      add sp, 2*5                              ; remove args from stack
+
+.update_pos:                                   ; update square position
+      mov ax, [px]                             ; load current x position
+      add ax, SPEED                            ; move x direction
+      ; TODO: x velocity
+      mov [px], ax                             ; save current x position
+
+      mov ax, [py]                             ; load current y position
+      add ax, SPEED                            ; move y direction
+      ; TODO: y velocity
+      mov [py], ax                             ; save current y position
+
+      jmp .draw_loop                           ; continue drawing
+
+.end:                                          ; end of program
       jmp $                                    ; infinite loop
 
 draw_rect:                                     ; ***** draw rectangle *****
@@ -169,7 +161,6 @@ set_pixel:                                     ; ***** write a pixel to screen *
       mul cx                                   ; offset = (y * SCREEN_WIDTH)
       add ax, bx                               ; offset = (y * SCREEN_WIDTH) + x
       mov di, ax                               ; set pixel offset
-
       pop ax                                   ; restore pixel color
       mov ah, 0x0C                             ; video page
       mov [es:di], al                          ; set color attribute
