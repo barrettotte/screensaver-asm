@@ -2,17 +2,19 @@
 
 %define PX_0 10
 %define PY_0 10
-%define VX_0 1
-%define VY_0 1
-%define SPEED 4
+%define VX_0 0xFF
+%define VY_0 0xFF
+
+%define SPEED 5
 %define SQUARE_WIDTH 25
 
 %define SCREEN_WIDTH 320
 %define SCREEN_HEIGHT 200
 
 %define COLOR_BLACK 0
-%define COLOR_RED 4
+%define COLOR_BLUE 1
 %define COLOR_MAGENTA 13
+%define MAX_COLOR 15
 
 %define VIDEO_SEGMENT 0xA000
 
@@ -51,7 +53,7 @@ main:                                          ; ***** main program loop *****
 
 .wait:                                         ; wait to allow animation
       mov cx, 1                                ; NOTE: This interrupt seems to behave strangely in emulated environments.
-      mov dx, 100                              ;   I just plugged in arbitrary numbers in here until I got a smoothish delay.  
+      mov dx, 50                               ;   I just plugged in arbitrary numbers in here until I got a smoothish delay.  
       mov ah, MISC_WAIT                        ; wait
       int MISC_INTERRUPT                       ; BIOS interrupt
 
@@ -79,24 +81,22 @@ main:                                          ; ***** main program loop *****
 .bounce_x:                                     ; flip x velocity if left or right
       mov al, byte [vx]                        ; load x velocity
       not al                                   ; flip x velocity
-      and al, 0x1                              ; only keep last bit
       mov byte [vx], al                        ; save x velocity
       jmp .update_color                        ; skip to color change
 
 .bounce_y:                                     ; flip y velocity if up or down
       mov al, byte [vy]                        ; load y velocity
       not al                                   ; flip y velocity
-      and al, 0x1                              ; only keep last bit
       mov byte [vy], al                        ; save y velocity
 
 .update_color:
-      mov ax, [color]                          ; load current color
-      inc ax                                   ; change color
-      cmp ax, 15                               ; check if color wrap needed
+      mov al, [color]                          ; load current color
+      inc al                                   ; change color
+      cmp al, MAX_COLOR                        ; check if color wrap needed
       jle .skip_color_wrap                     ; skip color wrap if not needed
-      mov ax, 1                                ; wrap colors around
+      mov al, COLOR_BLUE                       ; wrap colors around
 .skip_color_wrap:                              ;
-      mov [color], ax                          ; save updated color
+      mov byte [color], al                     ; save updated color
 
 .draw_next:                                    ; continue to next iteration
 
@@ -196,7 +196,7 @@ py:   dw PY_0                                  ; y position
 vx:   db VX_0                                  ; x velocity (1=right, 0=left)
 vy:   db VY_0                                  ; y velocity (1=down, 0=up)
 color:                                         ;
-      db COLOR_RED                             ; color of square (init red)
+      db COLOR_BLUE                            ; color of square
 
 %ifdef SKIP_FILL
 %else
