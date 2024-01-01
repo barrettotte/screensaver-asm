@@ -4,7 +4,7 @@
 %define PY_0 10
 %define VX_0 1
 %define VY_0 1
-%define SPEED 2
+%define SPEED 4
 %define SQUARE_WIDTH 25
 
 %define SCREEN_WIDTH 320
@@ -55,38 +55,48 @@ main:                                          ; ***** main program loop *****
       mov ah, MISC_WAIT                        ; wait
       int MISC_INTERRUPT                       ; BIOS interrupt
 
-.check_bounds:                                 ; check left, right, top, and bottom bounds
-      mov cx, [px]                             ; load current x position
-      mov dx, [py]                             ; load current y position
+.check_ybounds:                                ; check top or bottom bounds
+      mov cx, [py]                             ; load current y position
 .check_top:                                    ; check top bound
-      cmp dx, 0                                ;
-      jle .do_bounce                           ; bounce if top bound hit (py <= 0)
-.check_left:                                   ; check left bound
-      cmp cx, 0                                ;
-      jle .do_bounce                           ; bounce if left bound hit (px <= 0)
-.check_right:                                  ; check right bound
-      cmp cx, SCREEN_WIDTH-SQUARE_WIDTH        ;
-      jge .do_bounce                           ; bounce if right bound hit (px >= SCREEN_WIDTH-SQUARE_WIDTH)
+      cmp cx, SPEED                            ;
+      jle .bounce_y                            ; bounce if top bound hit (py <= 0)
 .check_bottom:                                 ; check bottom bound
-      cmp dx, SCREEN_HEIGHT-SQUARE_WIDTH       ;
-      jge .do_bounce                           ; bounce if bottom bound hit (py >= SCREEN_HEIGHT-SQUARE_WIDTH)
+      cmp cx, SCREEN_HEIGHT-SQUARE_WIDTH-SPEED ;
+      jge .bounce_y                            ; bounce if bottom bound hit (py >= SCREEN_HEIGHT-SQUARE_WIDTH)
+
+.check_xbounds:                                ; check left or right bounds
+      mov cx, [px]                             ; load current x position
+.check_left:                                   ; check left bound
+      cmp cx, SPEED                            ;
+      jle .bounce_x                            ; bounce if left bound hit (px <= 0)
+.check_right:                                  ; check right bound
+      cmp cx, SCREEN_WIDTH-SQUARE_WIDTH-SPEED  ;
+      jge .bounce_x                            ; bounce if right bound hit (px >= SCREEN_WIDTH-SQUARE_WIDTH)
+
 .no_bounce:                                    ; no bounds hit
       jmp .draw_next                           ; skip bouncing
 
-.do_bounce:                                    ; change direction depending on wall hit
-      ; TODO:
-      nop
-      ; if left or right bound hit, reverse x velocity
-      ; if top or bottom bound hit, reverse y velocity
-      ; x++ if x == 1, else x--
-      ; y++ if y == 1, else y--
+.bounce_x:                                     ; flip x velocity if left or right
+      mov al, byte [vx]                        ; load x velocity
+      not al                                   ; flip x velocity
+      and al, 0x1                              ; only keep last bit
+      mov byte [vx], al                        ; save x velocity
+      jmp .update_color                        ; skip to color change
+
+.bounce_y:                                     ; flip y velocity if up or down
+      mov al, byte [vy]                        ; load y velocity
+      not al                                   ; flip y velocity
+      and al, 0x1                              ; only keep last bit
+      mov byte [vy], al                        ; save y velocity
+
 .update_color:
+      mov ax, [color]                          ; load current color
       inc ax                                   ; change color
       cmp ax, 15                               ; check if color wrap needed
       jle .skip_color_wrap                     ; skip color wrap if not needed
       mov ax, 1                                ; wrap colors around
 .skip_color_wrap:                              ;
-      mov [color], ax                          ; update current color
+      mov [color], ax                          ; save updated color
 
 .draw_next:                                    ; continue to next iteration
 
@@ -101,16 +111,29 @@ main:                                          ; ***** main program loop *****
       call draw_rect                           ; draw rectangle
       add sp, 2*5                              ; remove args from stack
 
-.update_pos:                                   ; update square position
+.px_update:                                    ; update position x
       mov ax, [px]                             ; load current x position
-      add ax, SPEED                            ; move x direction
-      ; TODO: x velocity
-      mov [px], ax                             ; save current x position
+      mov bl, byte [vx]                        ; load x velocity direction 
+      cmp bl, 0                                ; check if left or right
+      jz .px_sub                               ; if vx == 0 then left, else right
+      add ax, SPEED                            ; move x right
+      jmp .px_save                             ;
+.px_sub:                                       ; 
+      sub ax, SPEED                            ; move x left
+.px_save:                                      ; 
+      mov [px], ax                             ; save x position
 
+.py_update:                                    ; update position y
       mov ax, [py]                             ; load current y position
-      add ax, SPEED                            ; move y direction
-      ; TODO: y velocity
-      mov [py], ax                             ; save current y position
+      mov bl, byte [vy]                        ; load y velocity direction
+      cmp bl, 0                                ; check if up or down
+      jz .py_sub                               ; if vy == 0 then up, else down
+      add ax, SPEED                            ; move y down
+      jmp .py_save                             ;
+.py_sub:                                       ;
+      sub ax, SPEED                            ; move y up 
+.py_save:                                      ; 
+      mov [py], ax                             ; save y position
 
       jmp .draw_loop                           ; continue drawing
 
