@@ -22,3 +22,6 @@ check_size:
 
 clean:
 			rm -f *.o *.lst *.elf *.img *.com *.bin
+
+pytest:
+			python3 test.py
